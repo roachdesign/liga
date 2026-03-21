@@ -1,12 +1,10 @@
 let datosExcel = [];
 
-// Orden específico de categorías (Primera a Octava)
 const ORDEN_CATEGORIAS = [
     'Primera', 'Segunda', 'Tercera', 'Cuarta', 
     'Quinta', 'Sexta', 'Séptima', 'Septima', 'Octava'
 ];
 
-// Mapeo exacto de tus columnas del Excel
 const COLUMNAS = {
     club: 'Club',
     categoria: 'Categoría',
@@ -28,60 +26,113 @@ const COLUMNAS = {
     categoriaTMT: 'categoriatmt'
 };
 
-// URL base para fotos
 const URL_FOTOS = 'https://www.tenisdemesaparatodos.com/fotos/jugadores/';
-
-// Variable para saber si ya intentamos cargar automáticamente
 let autoCargaIntentada = false;
 
 window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         if (!autoCargaIntentada) {
-            cargarExcelAuto();
+            cargarDatos();
         }
     }, 500);
     
     document.getElementById('fileInput').addEventListener('change', handleFile);
 });
 
-async function cargarExcelAuto() {
+async function cargarDatos() {
     if (autoCargaIntentada) return;
     autoCargaIntentada = true;
     
     mostrarLoading(true);
     
-    const rutasPosibles = [
+    // Intentar cargar JSON primero (más confiable en GitHub Pages)
+    const rutasJSON = [
+        'data/equipos.json',
+        './data/equipos.json',
+        'equipos.json',
+        './equipos.json'
+    ];
+    
+    for (const ruta of rutasJSON) {
+        try {
+            console.log('Intentando cargar JSON:', ruta);
+            const response = await fetch(ruta, { cache: 'no-cache' });
+            
+            if (response.ok) {
+                datosExcel = await response.json();
+                console.log('JSON cargado:', datosExcel.length, 'registros');
+                inicializarApp();
+                document.querySelector('.upload-section').style.display = 'none';
+                return;
+            }
+        } catch (error) {
+            console.log('No se pudo cargar JSON desde:', ruta);
+        }
+    }
+    
+    // Si no hay JSON, intentar Excel (para uso local)
+    const rutasExcel = [
         'data/equipos.xlsx',
         './data/equipos.xlsx',
         'equipos.xlsx',
         './equipos.xlsx'
     ];
     
-    for (const ruta of rutasPosibles) {
+    for (const ruta of rutasExcel) {
         try {
-            console.log('Intentando cargar:', ruta);
-            const response = await fetch(ruta, { 
-                method: 'GET',
-                cache: 'no-cache'
-            });
+            console.log('Intentando cargar Excel:', ruta);
+            const response = await fetch(ruta, { cache: 'no-cache' });
             
             if (response.ok) {
                 const arrayBuffer = await response.arrayBuffer();
                 if (arrayBuffer.byteLength > 0) {
-                    console.log('Archivo encontrado en:', ruta);
                     procesarExcel(arrayBuffer);
                     document.querySelector('.upload-section').style.display = 'none';
                     return;
                 }
             }
         } catch (error) {
-            console.log('No se pudo cargar desde:', ruta);
+            console.log('No se pudo cargar Excel desde:', ruta);
         }
     }
     
-    console.log('No se encontró archivo automático, mostrando carga manual');
+    console.log('No se encontró archivo automático');
     mostrarLoading(false);
     mostrarMensajeCargaManual();
+}
+
+function procesarExcel(data) {
+    try {
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        datosExcel = XLSX.utils.sheet_to_json(firstSheet);
+        console.log('Excel procesado:', datosExcel.length, 'registros');
+        inicializarApp();
+        mostrarLoading(false);
+    } catch (error) {
+        console.error('Error al procesar Excel:', error);
+        alert('Error al procesar el archivo: ' + error.message);
+        mostrarLoading(false);
+    }
+}
+
+function inicializarApp() {
+    if (datosExcel.length > 0) {
+        const columnasEncontradas = Object.keys(datosExcel[0]);
+        const posibleCategoriaTMT = columnasEncontradas.find(col => 
+            col.toLowerCase().includes('categoria') && col.toLowerCase().includes('tmt')
+        );
+        if (posibleCategoriaTMT && posibleCategoriaTMT !== COLUMNAS.categoriaTMT) {
+            console.log('Columna categoría TMT encontrada como:', posibleCategoriaTMT);
+            COLUMNAS.categoriaTMT = posibleCategoriaTMT;
+        }
+    }
+    
+    poblarSelect('categoria', obtenerUnicos('categoria'));
+    document.getElementById('categoria').disabled = false;
+    resetSelect('club');
+    resetSelect('equipo');
+    limpiarResultados();
 }
 
 function mostrarMensajeCargaManual() {
@@ -89,14 +140,13 @@ function mostrarMensajeCargaManual() {
     uploadSection.innerHTML = `
         <div class="manual-upload">
             <span class="icon">📁</span>
-            <p>No se encontró el archivo automático. Por favor, sube tu Excel:</p>
+            <p>Sube tu archivo Excel:</p>
             <label for="fileInput" class="file-label">
                 Seleccionar archivo equipos.xlsx
             </label>
             <input type="file" id="fileInput" accept=".xlsx,.xls" />
         </div>
     `;
-    
     document.getElementById('fileInput').addEventListener('change', handleFile);
 }
 
@@ -119,42 +169,6 @@ function handleFile(e) {
 
 function mostrarLoading(mostrar) {
     document.getElementById('loading').classList.toggle('hidden', !mostrar);
-}
-
-function procesarExcel(data) {
-    try {
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        datosExcel = XLSX.utils.sheet_to_json(firstSheet);
-        
-        console.log('Datos cargados:', datosExcel.length, 'registros');
-        
-        if (datosExcel.length > 0) {
-            console.log('Columnas detectadas:', Object.keys(datosExcel[0]));
-            const columnasEncontradas = Object.keys(datosExcel[0]);
-            const posibleCategoriaTMT = columnasEncontradas.find(col => 
-                col.toLowerCase().includes('categoria') && col.toLowerCase().includes('tmt')
-            );
-            if (posibleCategoriaTMT && posibleCategoriaTMT !== COLUMNAS.categoriaTMT) {
-                console.log('Columna categoría TMT encontrada como:', posibleCategoriaTMT);
-                COLUMNAS.categoriaTMT = posibleCategoriaTMT;
-            }
-        }
-        
-        poblarSelect('categoria', obtenerUnicos('categoria'));
-        document.getElementById('categoria').disabled = false;
-        
-        resetSelect('club');
-        resetSelect('equipo');
-        limpiarResultados();
-        
-        mostrarLoading(false);
-        
-    } catch (error) {
-        console.error('Error al procesar:', error);
-        alert('Error al procesar el archivo: ' + error.message);
-        mostrarLoading(false);
-    }
 }
 
 function obtenerUnicos(campo) {
