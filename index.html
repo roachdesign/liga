@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Equipos - Tenis de Mesa</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏓 Tenis de Mesa para Todos</h1>
+            <p>Consulta de equipos y jugadores</p>
+        </header>
+        
+        <div class="upload-section">
+            <label for="fileInput" class="file-label">
+                📁 Cargar archivo Excel
+            </label>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" />
+            <small>O deja el archivo en /data/equipos.xlsx para carga automática</small>
+        </div>
+
+        <div class="filters">
+            <div class="select-group">
+                <label for="categoria">Categoría:</label>
+                <select id="categoria" disabled>
+                    <option value="">Selecciona categoría...</option>
+                </select>
+            </div>
+
+            <div class="select-group">
+                <label for="club">Club:</label>
+                <select id="club" disabled>
+                    <option value="">Selecciona club...</option>
+                </select>
+            </div>
+
+            <div class="select-group">
+                <label for="equipo">Equipo:</label>
+                <select id="equipo" disabled>
+                    <option value="">Selecciona equipo...</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Cargando datos...</p>
+        </div>
+
+        <div id="resultados" class="resultados">
+            <div class="empty-state">
+                <span class="icon">🏓</span>
+                <p>Selecciona los filtros para ver los jugadores</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
