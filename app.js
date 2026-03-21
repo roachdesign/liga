@@ -63,6 +63,7 @@ async function cargarDatos() {
                 console.log('JSON cargado:', datosExcel.length, 'registros');
                 inicializarApp();
                 document.querySelector('.upload-section').style.display = 'none';
+                mostrarLoading(false); // <-- CORREGIDO: Ocultar loading
                 return;
             }
         } catch (error) {
@@ -108,7 +109,7 @@ function procesarExcel(data) {
         datosExcel = XLSX.utils.sheet_to_json(firstSheet);
         console.log('Excel procesado:', datosExcel.length, 'registros');
         inicializarApp();
-        mostrarLoading(false);
+        mostrarLoading(false); // <-- Esto estaba bien
     } catch (error) {
         console.error('Error al procesar Excel:', error);
         alert('Error al procesar el archivo: ' + error.message);
